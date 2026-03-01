@@ -1,0 +1,99 @@
+version: '3.9'
+
+# ── Local development with Docker ────────────────────────────────────────────
+# Usage:
+#   docker compose up          → start all services
+#   docker compose up --build  → rebuild images after code changes
+#   docker compose down -v     → stop and remove volumes
+#
+# MongoDB is run locally via Docker — no Atlas needed for development.
+# In production, MongoDB Atlas is used instead.
+
+services:
+
+  # ── API ────────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shopsphere-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV:           development
+      PORT:               5000
+      MONGODB_URI:        mongodb://mongo:27017/shopsphere
+      JWT_ACCESS_SECRET:  dev_access_secret_change_in_prod
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: dev_refresh_secret_change_in_prod
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CLIENT_URL:         http://localhost:5173
+      # Add your Stripe + Cloudinary keys here or use an env_file
+    env_file:
+      - ./backend/.env      # overrides above if file exists
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      # Mount source for hot-reload (requires nodemon in dev)
+      - ./backend/src:/app/src:ro
+    networks:
+      - shopsphere
+
+  # ── Frontend (served by Vite dev server) ──────────────────────────────────
+  frontend:
+    image: node:20-alpine
+    container_name: shopsphere-frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:5000/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules         # anonymous volume prevents host override
+    depends_on:
+      - api
+    networks:
+      - shopsphere
+
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    container_name: shopsphere-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"       # expose for MongoDB Compass access
+    volumes:
+      - mongo_data:/data/db  # persist data across container restarts
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - shopsphere
+
+  # ── Mongo Express (DB admin UI) ───────────────────────────────────────────
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: shopsphere-mongoexpress
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_BASICAUTH:      false   # disable auth for local dev only
+    depends_on:
+      - mongo
+    networks:
+      - shopsphere
+
+volumes:
+  mongo_data:
+
+networks:
+  shopsphere:
+    driver: bridge

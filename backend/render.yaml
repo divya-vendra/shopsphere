@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: shopsphere-api
+    runtime: node
+    region: oregon          # us-west-2 — closest to MongoDB Atlas us-east if cross-region latency is acceptable
+    plan: starter           # upgrade to standard for zero-downtime deploys
+    rootDir: .
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+
+    # Render automatically restarts the service if healthCheckPath returns non-2xx
+    # for more than 3 consecutive checks (every 30 seconds).
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # All secrets are injected via Render Dashboard → Environment
+      # Never commit actual values — these are placeholders for documentation.
+      - key: PORT
+        value: 5000
+
+      - key: MONGODB_URI
+        sync: false         # set manually in Render dashboard
+
+      - key: JWT_ACCESS_SECRET
+        generateValue: true # Render generates a cryptographically random value
+
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      - key: STRIPE_SECRET_KEY
+        sync: false
+
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+
+      - key: CLOUDINARY_API_KEY
+        sync: false
+
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      - key: EMAIL_HOST
+        sync: false
+
+      - key: EMAIL_PORT
+        sync: false
+
+      - key: EMAIL_USER
+        sync: false
+
+      - key: EMAIL_PASS
+        sync: false
+
+      - key: EMAIL_FROM
+        value: ShopSphere <noreply@shopsphere.com>
+
+      - key: CLIENT_URL
+        sync: false         # set to your Vercel frontend URL

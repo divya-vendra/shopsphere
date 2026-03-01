@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+*.log
+.git/
+.gitignore
+README.md
+DEPLOYMENT.md
+STRIPE_SETUP.md
+*.md
+.DS_Store
+coverage/
