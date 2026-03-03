@@ -119,7 +119,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     # Only deploy from main branch pushes (not PRs)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Also skip if Render secrets are not configured (prevents failing CI on forks/new repos).
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.RENDER_DEPLOY_HOOK_URL != '' && secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID != ''
 
     steps:
       - name: Trigger Render deploy hook
